@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Target Quiz Archer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Background Elements -->
+    <div class="background-glow"></div>
+    <div class="particles" id="particles"></div>
+
+    <!-- Main Game Container -->
+    <div id="game-container">
+        <!-- Canvas for Archery Gameplay -->
+        <canvas id="game-canvas"></canvas>
+
+        <!-- UI Overlays -->
+        <div id="ui-layer">
+            
+            <!-- Start Screen -->
+            <div id="start-screen" class="panel active">
+                <h1 class="title">TARGET<span>QUIZ</span>ARCHER</h1>
+                <p class="subtitle">Aim for the center to get more questions & higher scores!</p>
+                <button id="start-btn" class="primary-btn">Start Game</button>
+            </div>
+
+            <!-- HUD (Heads Up Display) -->
+            <div id="hud" class="hidden">
+                <div class="hud-top">
+                    <div class="stat-box">
+                        <span class="label">SCORE</span>
+                        <span id="score-display" class="value">0</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="label">ARROWS</span>
+                        <div class="arrow-counter" id="arrow-counter">
+                            <!-- Arrow icons generated via JS -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="hud-bottom">
+                    <div class="power-meter-container">
+                        <div class="power-meter-label">POWER</div>
+                        <div class="power-meter-bg">
+                            <div id="power-bar" class="power-meter-fill"></div>
+                        </div>
+                        <div class="action-hint">Click & Hold to Aim, Release to Shoot</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quiz Overlay -->
+            <div id="quiz-overlay" class="panel hidden">
+                <div class="quiz-header">
+                    <div class="timer-ring">
+                        <svg width="60" height="60">
+                            <circle class="timer-bg" cx="30" cy="30" r="26"></circle>
+                            <circle id="timer-progress" class="timer-fg" cx="30" cy="30" r="26"></circle>
+                        </svg>
+                        <span id="timer-text" class="timer-value">10</span>
+                    </div>
+                    <div class="quiz-progress" id="quiz-progress-text">Question 1 of 5</div>
+                </div>
+                
+                <div class="question-container">
+                    <h2 id="question-text">What is the capital of India?</h2>
+                </div>
+                
+                <div class="options-grid" id="options-container">
+                    <!-- Options generated via JS -->
+                </div>
+            </div>
+
+            <!-- Result Feedback (Hit/Miss) -->
+            <div id="feedback-toast" class="toast hidden">
+                <div class="toast-icon" id="toast-icon">🎯</div>
+                <div class="toast-content">
+                    <h3 id="toast-title">Bullseye!</h3>
+                    <p id="toast-message">5 Questions Unlocked</p>
+                </div>
+            </div>
+
+            <!-- Game Over Screen -->
+            <div id="game-over-screen" class="panel hidden">
+                <h1 class="title">GAME<span>OVER</span></h1>
+                <div class="final-score-box">
+                    <div class="score-label">FINAL SCORE</div>
+                    <div id="final-score" class="score-value">0</div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-ttl">Accuracy</div>
+                        <div id="stat-accuracy" class="stat-val">0%</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-ttl">Quiz Rate</div>
+                        <div id="stat-quiz-rate" class="stat-val">0%</div>
+                    </div>
+                </div>
+                <button id="restart-btn" class="primary-btn">Play Again</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Sound Effects -->
+    <audio id="sfx-hover" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3" preload="auto"></audio>
+    <audio id="sfx-click" src="https://assets.mixkit.co/active_storage/sfx/2573/2573-preview.mp3" preload="auto"></audio>
+    <audio id="sfx-shoot" src="https://assets.mixkit.co/active_storage/sfx/2143/2143-preview.mp3" preload="auto"></audio>
+    <audio id="sfx-hit" src="https://assets.mixkit.co/active_storage/sfx/2144/2144-preview.mp3" preload="auto"></audio>
+    <audio id="sfx-correct" src="https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3" preload="auto"></audio>
+    <audio id="sfx-wrong" src="https://assets.mixkit.co/active_storage/sfx/2003/2003-preview.mp3" preload="auto"></audio>
+
+    <script src="script.js"></script>
+</body>
+</html>
