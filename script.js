@@ -175,8 +175,21 @@ let powerLevel = 0;
 let powerGrowing = true;
 let aimAngle = 0;
 
-// Render styles
-const targetColors = ['#000000', '#ffffff', '#2a2aff', '#ffea00', '#ff2a2a'];
+// Ring colors: index 0 = center (Black), index 4 = outermost (Orange)
+// Center to outermost: Black(5Q) → White(4Q) → Blue(3Q) → Yellow(2Q) → Orange(1Q)
+// Drawing loop draws i=4 first (outermost) down to i=0 (center on top)
+const targetColors = ['#111111', '#ffffff', '#2a5cff', '#ffdd00', '#ff6600'];
+const ringNames = ['Black', 'White', 'Blue', 'Yellow', 'Orange'];
+const ringQuestions = [5, 4, 3, 2, 1];
+// Quiz theme colors per ring
+const ringThemeColors = [
+    { border: '#888888', glow: 'rgba(136,136,136,0.4)', text: '#cccccc' },  // Black (center)
+    { border: '#ffffff', glow: 'rgba(255,255,255,0.3)', text: '#ffffff' },  // White
+    { border: '#2a5cff', glow: 'rgba(42,92,255,0.4)', text: '#5c8aff' },   // Blue
+    { border: '#ffdd00', glow: 'rgba(255,221,0,0.4)', text: '#ffdd00' },   // Yellow
+    { border: '#ff6600', glow: 'rgba(255,102,0,0.4)', text: '#ff6600' }    // Orange (edge)
+];
+let currentRingTheme = null;
 
 function startGame() {
     playSound('sfx-click');
@@ -339,20 +352,24 @@ function checkHit() {
 }
 
 function evaluateHit(dist) {
-    // 5 rings
+    // 5 rings — center (index 0) gives most questions
     const ringWidth = target.radius / 5;
-    let ringHit = 0;
+    let ringIndex;
     
-    if(dist < ringWidth) ringHit = 5; // Center
-    else if(dist < ringWidth * 2) ringHit = 4;
-    else if(dist < ringWidth * 3) ringHit = 3;
-    else if(dist < ringWidth * 4) ringHit = 2;
-    else ringHit = 1;
+    if(dist < ringWidth) ringIndex = 0;          // Black center → 5Q
+    else if(dist < ringWidth * 2) ringIndex = 1;  // White → 4Q
+    else if(dist < ringWidth * 3) ringIndex = 2;  // Blue → 3Q
+    else if(dist < ringWidth * 4) ringIndex = 3;  // Yellow → 2Q
+    else ringIndex = 4;                            // Orange edge → 1Q
     
-    showToast(ringHit === 5 ? "BULLSEYE!" : "GOOD HIT!", `${ringHit} Question${ringHit>1?'s':''} Unlocked`, "🎯", true);
+    const ringHit = ringQuestions[ringIndex];
+    const colorName = ringNames[ringIndex];
+    const title = ringHit === 5 ? "🎯 BULLSEYE!" : `HIT ${colorName.toUpperCase()} RING!`;
+    
+    showToast(title, `${ringHit} Question${ringHit > 1 ? 's' : ''} Unlocked`, "🎯", true);
     
     setTimeout(() => {
-        triggerQuiz(ringHit);
+        triggerQuiz(ringHit, ringIndex);
     }, 1500);
 }
 
@@ -558,29 +575,112 @@ function drawTarget() {
     ctx.save();
     ctx.translate(target.x, target.y);
     
-    // Draw 5 rings
+    // Outer shadow for 3D depth
+    ctx.beginPath();
+    ctx.arc(0, 0, target.radius + 8, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fill();
+    
+    // Outer border ring (wooden frame)
+    ctx.beginPath();
+    ctx.arc(0, 0, target.radius + 5, 0, Math.PI * 2);
+    const frameGrad = ctx.createRadialGradient(0, 0, target.radius - 5, 0, 0, target.radius + 5);
+    frameGrad.addColorStop(0, '#a0522d');
+    frameGrad.addColorStop(0.5, '#cd853f');
+    frameGrad.addColorStop(1, '#8b4513');
+    ctx.fillStyle = frameGrad;
+    ctx.fill();
+    
+    // Draw 5 rings as proper circles (matching hit detection)
     const ringWidth = target.radius / 5;
+    const ringLabels = ['5Q', '4Q', '3Q', '2Q', '1Q']; // center to outer
+    
     for(let i=4; i>=0; i--) {
-        ctx.beginPath();
-        // Squeeze X to make it look like a side-view or angled-view target
-        // Let's make it face the archer fully for simplicity, just a flat circle.
-        // It's a 2D game.
-        ctx.ellipse(0, 0, target.radius - (ringWidth * (4 - i)) * 0.4, target.radius - (ringWidth * (4 - i)), 0, 0, Math.PI * 2);
+        const r = target.radius - (ringWidth * (4 - i));
         
-        // Color
-        ctx.fillStyle = targetColors[i];
+        // Ring gradient for 3D effect
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        
+        const grad = ctx.createRadialGradient(-r*0.2, -r*0.2, 0, 0, 0, r);
+        const baseColor = targetColors[i];
+        
+        if(baseColor === '#111111') {
+            grad.addColorStop(0, '#333333');
+            grad.addColorStop(1, '#050505');
+        } else if(baseColor === '#ffffff') {
+            grad.addColorStop(0, '#ffffff');
+            grad.addColorStop(1, '#d0d0d0');
+        } else if(baseColor === '#2a5cff') {
+            grad.addColorStop(0, '#4a7cff');
+            grad.addColorStop(1, '#1a3ccc');
+        } else if(baseColor === '#ffdd00') {
+            grad.addColorStop(0, '#ffee55');
+            grad.addColorStop(1, '#ccaa00');
+        } else {
+            grad.addColorStop(0, '#ff8833');
+            grad.addColorStop(1, '#cc4400');
+        }
+        
+        ctx.fillStyle = grad;
         ctx.fill();
         
-        if (i > 0) { // white border for rings
-            ctx.strokeStyle = i === 1 ? '#000' : 'rgba(255,255,255,0.5)';
-            ctx.lineWidth = 2;
+        // Ring borders
+        if(i > 0) {
+            ctx.strokeStyle = (baseColor === '#ffffff' || baseColor === '#ffdd00')
+                ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.25)';
+            ctx.lineWidth = 1.5;
             ctx.stroke();
+        }
+        
+        // Ring label (question count)
+        if(r > 12) {
+            const labelR = r - ringWidth * 0.5;
+            if(labelR > 5) {
+                ctx.save();
+                ctx.font = `bold ${Math.max(10, ringWidth * 0.35)}px Outfit`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                // Contrast text color
+                if(baseColor === '#111111' || baseColor === '#2a5cff' || baseColor === '#ff6600') {
+                    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                } else {
+                    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                }
+                
+                ctx.fillText(ringLabels[i], 0, -labelR);
+                ctx.restore();
+            }
         }
     }
     
-    // Stand
-    ctx.fillStyle = "#8b4513";
-    ctx.fillRect(-10, target.radius, 20, ch - target.y);
+    // Bullseye center dot
+    ctx.beginPath();
+    ctx.arc(0, 0, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#ff0000';
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    
+    // Crosshair lines on target
+    ctx.beginPath();
+    ctx.moveTo(-target.radius, 0);
+    ctx.lineTo(target.radius, 0);
+    ctx.moveTo(0, -target.radius);
+    ctx.lineTo(0, target.radius);
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    
+    // Wooden stand
+    ctx.fillStyle = '#8b4513';
+    ctx.fillRect(-8, target.radius + 3, 16, ch - target.y);
+    
+    // Cross beam
+    ctx.fillStyle = '#a0522d';
+    ctx.fillRect(-25, target.radius + 15, 50, 8);
     
     ctx.restore();
 }
@@ -713,15 +813,30 @@ function drawArrow() {
     ctx.restore();
 }
 
-function triggerQuiz(numQuestions) {
+function triggerQuiz(numQuestions, ringIndex) {
     // Generate numQuestions of random questions
     currentQuestionQueue = shuffle([...questionBank]).slice(0, numQuestions);
     targetHitStats.quizQuestionsTotal += numQuestions;
     
+    // Apply ring color theme to quiz overlay
+    currentRingTheme = ringThemeColors[ringIndex];
+    const overlay = UI.quizOverlay;
+    overlay.style.borderColor = currentRingTheme.border;
+    overlay.style.boxShadow = `0 0 40px ${currentRingTheme.glow}, 0 20px 40px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.1)`;
+    
+    // Color the progress badge
+    const progressEl = document.getElementById('quiz-progress-text');
+    progressEl.style.background = currentRingTheme.glow;
+    progressEl.style.color = currentRingTheme.text;
+    
+    // Color the timer ring
+    const timerCircle = document.getElementById('timer-progress');
+    timerCircle.style.stroke = currentRingTheme.border;
+    
     currentState = GameState.PLAYING_QUIZ;
     UI.hud.classList.add('hidden');
-    UI.quizOverlay.classList.remove('hidden');
-    UI.quizOverlay.classList.add('active');
+    overlay.classList.remove('hidden');
+    overlay.classList.add('active');
     
     showNextQuestion();
 }
